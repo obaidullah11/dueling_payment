@@ -6,6 +6,10 @@ from Crypto.Cipher import AES
 import base64
 from .models import KnetTransaction
 from datetime import datetime
+import logging
+
+# Configure logging
+logger = logging.getLogger(__name__)
 
 
 def generate_track_id():
@@ -13,7 +17,7 @@ def generate_track_id():
     Generate a unique track ID for each transaction.
     """
     track_id = str(uuid.uuid4())[:8]
-    print(f"Generated Track ID: {track_id}")
+    logger.info(f"Generated new track ID: {track_id}")
     return track_id
 
 
@@ -26,14 +30,17 @@ class KnetPayment:
 
     def encrypt_AES(self, data):
         try:
+            logger.debug(f"Starting AES encryption for data length: {len(data)}")
             key = self.TERMINAL_RESOURCE_KEY.encode('utf-8')
             cipher = AES.new(key, AES.MODE_CBC, key)
             pad_length = 16 - (len(data) % 16)
             padded_data = data + (chr(pad_length) * pad_length)
             encrypted = cipher.encrypt(padded_data.encode('utf-8'))
-            return base64.b64encode(encrypted).decode('utf-8')
+            result = base64.b64encode(encrypted).decode('utf-8')
+            logger.debug("AES encryption completed successfully")
+            return result
         except Exception as e:
-            print(f"Encryption error: {str(e)}")
+            logger.error(f"AES encryption failed: {str(e)}")
             raise
 
 
@@ -41,9 +48,12 @@ class KnetPayment:
 def initiate_payment(request):
     if request.method == 'POST':
         try:
+            logger.info("Starting new payment initiation")
             data = json.loads(request.body)
             amount = "{:.3f}".format(float(data.get('amount', '0')))
             track_id = generate_track_id()
+
+            logger.info(f"Processing payment - Amount: {amount}, Track ID: {track_id}")
 
             knet = KnetPayment()
             
@@ -72,7 +82,7 @@ def initiate_payment(request):
                 f"responseURL={response_url}&"
             )
 
-            # Encrypt the request
+            logger.debug(f"Built request string: {request_string}")
             encrypted_data = knet.encrypt_AES(request_string)
 
             # Build payment URL - simplified for direct redirect
@@ -91,12 +101,15 @@ def initiate_payment(request):
                 f"tranportalId={knet.TRANPORTAL_ID}"
             )
 
+            logger.info(f"Created payment URL for track ID: {track_id}")
+
             # Store initial transaction
             transaction = KnetTransaction.objects.create(
                 track_id=track_id,
                 amount=amount,
                 status='INITIATED'
             )
+            logger.info(f"Stored initial transaction record for track ID: {track_id}")
 
             # Return URL for redirect
             return JsonResponse({
@@ -106,6 +119,7 @@ def initiate_payment(request):
             })
 
         except Exception as e:
+            logger.error(f"Payment initiation failed: {str(e)}")
             return JsonResponse({
                 'success': False,
                 'error': str(e)
@@ -120,11 +134,13 @@ def payment_response(request):
     """
     Handles the notification from KNET (server-to-server)
     """
+    logger.info("Received payment response from KNET")
     try:
         # Get the encrypted response from the output stream
         trandata = request.POST.get('trandata')
         
         if trandata:
+            logger.debug("Processing trandata from KNET response")
             knet = KnetPayment()
             decrypted_data = knet.decrypt_AES(trandata)
             
@@ -133,6 +149,8 @@ def payment_response(request):
             
             # Get track_id from response
             track_id = params.get('trackid')
+            
+            logger.info(f"Processing payment response for track ID: {track_id}")
             
             # Update transaction in database
             transaction = KnetTransaction.objects.filter(track_id=track_id).first()
@@ -145,19 +163,22 @@ def payment_response(request):
                 transaction.encrypted_response = trandata
                 transaction.decrypted_response = decrypted_data
                 transaction.save()
+                logger.info(f"Updated transaction record for track ID: {track_id}")
 
             # Generate receipt URL
             receipt_url = request.build_absolute_uri(
                 f'/payment/receipt/{track_id}/'
             )
+            logger.info(f"Generated receipt URL for track ID: {track_id}")
 
             # Return REDIRECT as required
             return HttpResponse(f"REDIRECT={receipt_url}")
             
+        logger.warning("No transaction data received in payment response")
         return HttpResponse("No transaction data received", status=400)
 
     except Exception as e:
-        print(f"Payment response error: {str(e)}")
+        logger.error(f"Payment response processing failed: {str(e)}")
         return HttpResponse("Error processing payment", status=500)
         
         
@@ -166,11 +187,14 @@ def payment_error(request):
     """
     Handles KNET payment errors and returns JSON response
     """
+    logger.info("Received payment error from KNET")
     try:
         # Get error parameters
         error_code = request.GET.get('Error', '')
         error_text = request.GET.get('ErrorText', '')
         track_id = request.GET.get('trackid', '')
+
+        logger.error(f"Payment error - Track ID: {track_id}, Error: {error_code}, Message: {error_text}")
 
         # Update transaction if track_id exists
         if track_id:
@@ -180,6 +204,7 @@ def payment_error(request):
                 transaction.error_code = error_code
                 transaction.error_text = error_text
                 transaction.save()
+                logger.info(f"Updated transaction record with error details for track ID: {track_id}")
 
         # Return JSON response
         return JsonResponse({
@@ -195,6 +220,7 @@ def payment_error(request):
         }, status=400)
 
     except Exception as e:
+        logger.error(f"Error handling payment error: {str(e)}")
         # Return system error
         return JsonResponse({
             'status': 'error',

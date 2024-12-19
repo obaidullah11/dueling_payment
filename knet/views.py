@@ -7,6 +7,7 @@ import base64
 from .models import KnetTransaction
 from datetime import datetime
 import logging
+import requests
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -58,8 +59,21 @@ def initiate_payment(request):
             knet = KnetPayment()
             
             # Build absolute URLs
-            response_url = 'https://mfarhanakram.eu.pythonanywhere.com/payment/response/'
-            error_url = 'https://mfarhanakram.eu.pythonanywhere.com/payment/error/'
+            response_url = 'https://duelingpayment.eu.pythonanywhere.com/payment/response/'
+            error_url = 'https://duelingpayment.eu.pythonanywhere.com/payment/error/'
+
+            # Debug URL configurations
+            logger.debug(f"Response URL configured as: {response_url}")
+            logger.debug(f"Error URL configured as: {error_url}")
+            
+            # Test URL accessibility
+            try:
+                response_check = requests.head(response_url)
+                logger.debug(f"Response URL status: {response_check.status_code}")
+                error_check = requests.head(error_url)
+                logger.debug(f"Error URL status: {error_check.status_code}")
+            except Exception as url_error:
+                logger.warning(f"URL verification failed: {str(url_error)}")
 
             # Build request string in correct order
             request_string = (
@@ -102,6 +116,10 @@ def initiate_payment(request):
             )
 
             logger.info(f"Created payment URL for track ID: {track_id}")
+
+            # Add debug logging for the final payment URL
+            logger.debug(f"Final payment URL generated: {payment_url}")
+            logger.debug(f"Payment URL parameters: {payment_url.split('?')[1]}")
 
             # Store initial transaction
             transaction = KnetTransaction.objects.create(

@@ -1,249 +1,119 @@
-from django.views.decorators.csrf import csrf_exempt
-from django.http import JsonResponse, HttpResponse
-import json
-import uuid
-from Crypto.Cipher import AES
-import base64
-from .models import KnetTransaction
-from datetime import datetime
-import logging
-import requests
 
-# Configure logging
+### 6. Views (payment/views.py)
+
+from rest_framework import status
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from django.conf import settings
+from .models import PaymentTransaction
+from .serializers import InitiatePaymentSerializer, PaymentTransactionSerializer
+from .utils import generate_track_id, encrypt_aes, decrypt_aes, create_knet_request_data
+import logging
+
 logger = logging.getLogger(__name__)
 
+class InitiatePaymentView(APIView):
+    def post(self, request):
+        serializer = InitiatePaymentSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-def generate_track_id():
-    """
-    Generate a unique track ID for each transaction.
-    """
-    track_id = str(uuid.uuid4())[:8]
-    logger.info(f"Generated new track ID: {track_id}")
-    return track_id
-
-
-class KnetPayment:
-    TRANPORTAL_ID = "540801"
-    TRANPORTAL_PASSWORD = "540801pg"
-    TERMINAL_RESOURCE_KEY = "9D2JJ07HA1Y47RF3"
-    # Correct test URL for RAW method
-    TEST_URL = "https://kpaytest.com.kw/kpg/PaymentHTTP.htm"
-
-    def encrypt_AES(self, data):
         try:
-            logger.debug(f"Starting AES encryption for data length: {len(data)}")
-            key = self.TERMINAL_RESOURCE_KEY.encode('utf-8')
-            cipher = AES.new(key, AES.MODE_CBC, key)
-            pad_length = 16 - (len(data) % 16)
-            padded_data = data + (chr(pad_length) * pad_length)
-            encrypted = cipher.encrypt(padded_data.encode('utf-8'))
-            result = base64.b64encode(encrypted).decode('utf-8')
-            logger.debug("AES encryption completed successfully")
-            return result
-        except Exception as e:
-            logger.error(f"AES encryption failed: {str(e)}")
-            raise
-
-
-@csrf_exempt
-def initiate_payment(request):
-    if request.method == 'POST':
-        try:
-            logger.info("Starting new payment initiation")
-            data = json.loads(request.body)
-            amount = "{:.3f}".format(float(data.get('amount', '0')))
+            # Create transaction record
             track_id = generate_track_id()
-
-            logger.info(f"Processing payment - Amount: {amount}, Track ID: {track_id}")
-
-            knet = KnetPayment()
-            
-            # Build absolute URLs
-            response_url = 'https://duelingpayment.eu.pythonanywhere.com/payment/response/'
-            error_url = 'https://duelingpayment.eu.pythonanywhere.com/payment/error/'
-
-            # Debug URL configurations
-            logger.debug(f"Response URL configured as: {response_url}")
-            logger.debug(f"Error URL configured as: {error_url}")
-            
-            # Test URL accessibility
-            try:
-                response_check = requests.head(response_url)
-                logger.debug(f"Response URL status: {response_check.status_code}")
-                error_check = requests.head(error_url)
-                logger.debug(f"Error URL status: {error_check.status_code}")
-            except Exception as url_error:
-                logger.warning(f"URL verification failed: {str(url_error)}")
-
-            # Build request string in correct order
-            request_string = (
-                # f"id={knet.TRANPORTAL_ID}"
-                f"amt={amount}&"
-                f"action=1&"
-                f"responseURL={response_url}&"
-                f"errorURL={error_url}&"
-                f"trackid={track_id}&"
-                f"udf1=test1&"
-                f"udf2=test2&"
-                f"udf3=test3&"
-                f"udf4=test4&"
-                f"udf5=test5&"
-                f"currencycode=414&"
-                f"langid=USA&"
-                f"id={knet.TRANPORTAL_ID}&"
-                f"password={knet.TRANPORTAL_PASSWORD}"
-                f"errorURL={error_url}&"
-                f"responseURL={response_url}&"
-            )
-
-            logger.debug(f"Built request string: {request_string}")
-            encrypted_data = knet.encrypt_AES(request_string)
-
-            # Build payment URL - simplified for direct redirect
-            # payment_url = (
-            #     f"{knet.TEST_URL}?"
-            #     f"param=paymentInit&"
-            #     f"trandata={encrypted_data}"
-            #     f"tranportalId={knet.TRANPORTAL_ID}"
-            # )
-            payment_url = (
-                f"{knet.TEST_URL}?"
-                f"param=paymentInit&"
-                f"trandata={encrypted_data}&"
-                f"errorURL={error_url}&"
-                f"responseURL={response_url}&"
-                f"tranportalId={knet.TRANPORTAL_ID}"
-            )
-
-            logger.info(f"Created payment URL for track ID: {track_id}")
-
-            # Add debug logging for the final payment URL
-            logger.debug(f"Final payment URL generated: {payment_url}")
-            logger.debug(f"Payment URL parameters: {payment_url.split('?')[1]}")
-
-            # Store initial transaction
-            transaction = KnetTransaction.objects.create(
+            transaction = PaymentTransaction.objects.create(
                 track_id=track_id,
-                amount=amount,
-                status='INITIATED'
+                amount=serializer.validated_data['amount'],
+                currency=serializer.validated_data['currency']
             )
-            logger.info(f"Stored initial transaction record for track ID: {track_id}")
 
-            # Return URL for redirect
-            return JsonResponse({
-                'success': True,
+            # Prepare KNET request
+            payment_data = create_knet_request_data(
+                track_id=track_id,
+                amount=str(transaction.amount)
+            )
+
+            # Encrypt request data
+            encrypted_data = encrypt_aes(
+                '&'.join(f"{k}={v}" for k, v in payment_data.items()),
+                settings.KNET_SETTINGS['TERMINAL_RESOURCE_KEY']
+            )
+
+            # Create payment URL
+            payment_url = (
+                f"{settings.KNET_SETTINGS['PAYMENT_URL']}?"
+                f"param=paymentInit&trandata={encrypted_data}&"
+                f"errorURL={payment_data['errorURL']}&"
+                f"responseURL={payment_data['responseURL']}&"
+                f"tranportalId={payment_data['id']}"
+            )
+
+            return Response({
                 'payment_url': payment_url,
                 'track_id': track_id
             })
 
         except Exception as e:
-            logger.error(f"Payment initiation failed: {str(e)}")
-            return JsonResponse({
-                'success': False,
-                'error': str(e)
-            }, status=400)
-
-    return JsonResponse({
-        'success': False,
-        'error': 'Method not allowed'
-    }, status=405)
-@csrf_exempt
-def payment_response(request):
-    """
-    Handles the notification from KNET (server-to-server)
-    """
-    logger.info("Received payment response from KNET")
-    try:
-        # Get the encrypted response from the output stream
-        trandata = request.POST.get('trandata')
-        
-        if trandata:
-            logger.debug("Processing trandata from KNET response")
-            knet = KnetPayment()
-            decrypted_data = knet.decrypt_AES(trandata)
-            
-            # Parse the response
-            params = dict(item.split('=') for item in decrypted_data.split('&'))
-            
-            # Get track_id from response
-            track_id = params.get('trackid')
-            
-            logger.info(f"Processing payment response for track ID: {track_id}")
-            
-            # Update transaction in database
-            transaction = KnetTransaction.objects.filter(track_id=track_id).first()
-            if transaction:
-                transaction.result = params.get('result')
-                transaction.payment_id = params.get('paymentid')
-                transaction.auth = params.get('auth')
-                transaction.ref = params.get('ref')
-                transaction.tran_id = params.get('tranid')
-                transaction.encrypted_response = trandata
-                transaction.decrypted_response = decrypted_data
-                transaction.save()
-                logger.info(f"Updated transaction record for track ID: {track_id}")
-
-            # Generate receipt URL
-            receipt_url = request.build_absolute_uri(
-                f'/payment/receipt/{track_id}/'
+            logger.error(f"Payment initiation error: {str(e)}")
+            return Response(
+                {'error': 'Payment initiation failed'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-            logger.info(f"Generated receipt URL for track ID: {track_id}")
 
-            # Return REDIRECT as required
-            return HttpResponse(f"REDIRECT={receipt_url}")
-            
-        logger.warning("No transaction data received in payment response")
-        return HttpResponse("No transaction data received", status=400)
+class PaymentResponseView(APIView):
+    def post(self, request):
+        try:
+            error_text = request.data.get('ErrorText')
+            error_no = request.data.get('Error')
+            encrypted_data = request.data.get('trandata')
 
-    except Exception as e:
-        logger.error(f"Payment response processing failed: {str(e)}")
-        return HttpResponse("Error processing payment", status=500)
-        
-        
-@csrf_exempt
-def payment_error(request):
-    """
-    Handles KNET payment errors and returns JSON response
-    """
-    logger.info("Received payment error from KNET")
-    try:
-        # Get error parameters
-        error_code = request.GET.get('Error', '')
-        error_text = request.GET.get('ErrorText', '')
-        track_id = request.GET.get('trackid', '')
+            if not error_text and not error_no and encrypted_data:
+                # Decrypt response
+                decrypted_data = decrypt_aes(
+                    encrypted_data,
+                    settings.KNET_SETTINGS['TERMINAL_RESOURCE_KEY']
+                )
 
-        logger.error(f"Payment error - Track ID: {track_id}, Error: {error_code}, Message: {error_text}")
+                # Parse response data
+                response_params = dict(param.split('=') for param in decrypted_data.split('&'))
+                
+                # Update transaction
+                transaction = PaymentTransaction.objects.get(
+                    track_id=response_params.get('trackid')
+                )
+                transaction.payment_id = response_params.get('paymentid')
+                transaction.transaction_id = response_params.get('tranid')
+                transaction.reference_id = response_params.get('ref')
+                transaction.status = (
+                    PaymentTransaction.PaymentStatus.SUCCESSFUL 
+                    if response_params.get('result') == 'CAPTURED'
+                    else PaymentTransaction.PaymentStatus.FAILED
+                )
+                transaction.response_data = response_params
+                transaction.save()
 
-        # Update transaction if track_id exists
-        if track_id:
-            transaction = KnetTransaction.objects.filter(track_id=track_id).first()
-            if transaction:
-                transaction.result = 'ERROR'
-                transaction.error_code = error_code
+            else:
+                # Handle error response
+                transaction = PaymentTransaction.objects.get(
+                    track_id=request.data.get('trackid')
+                )
+                transaction.status = PaymentTransaction.PaymentStatus.FAILED
+                transaction.error_code = error_no
                 transaction.error_text = error_text
                 transaction.save()
-                logger.info(f"Updated transaction record with error details for track ID: {track_id}")
 
-        # Return JSON response
-        return JsonResponse({
-            'status': 'error',
-            'error_code': error_code,
-            'error_text': error_text,
-            'track_id': track_id,
-            'timestamp': datetime.now().isoformat(),
-            'debug': {
-                'query_params': dict(request.GET.items()),
-                'headers': dict(request.headers)
-            }
-        }, status=400)
+            serializer = PaymentTransactionSerializer(transaction)
+            return Response(serializer.data)
 
-    except Exception as e:
-        logger.error(f"Error handling payment error: {str(e)}")
-        # Return system error
-        return JsonResponse({
-            'status': 'error',
-            'error_code': 'SYSTEM_ERROR',
-            'error_text': str(e),
-            'timestamp': datetime.now().isoformat()
-        }, status=500)
+        except PaymentTransaction.DoesNotExist:
+            return Response(
+                {'error': 'Transaction not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            logger.error(f"Payment response error: {str(e)}")
+            return Response(
+                {'error': 'Payment response processing failed'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 

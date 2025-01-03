@@ -1,9 +1,12 @@
+
+### 7. URLs (payment/urls.py)
+
 from django.urls import path
-# from .views import initiate_payment, payment_response, payment_error
-from .views import *
+from .views import InitiatePaymentView, PaymentResponseView
+
+app_name = 'payment'
+
 urlpatterns = [
-    path('payment/initiate/', initiate_payment, name='initiate_payment'),
-    path('payment/response/', payment_response, name='payment_response'),
-    path('payment/error/', payment_error, name='payment_error'),
+    path('initiate/', InitiatePaymentView.as_view(), name='initiate-payment'),
+    path('response/', PaymentResponseView.as_view(), name='payment-response'),
 ]
-# URL Patterns

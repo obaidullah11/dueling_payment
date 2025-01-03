@@ -1,45 +1,32 @@
 from django.db import models
-from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 
-# class KnetPayment(models.Model):
-#     STATUS_CHOICES = (
-#         ('PENDING', 'Pending'),
-#         ('SUCCESS', 'Success'),
-#         ('FAILED', 'Failed'),
-#         ('CANCELLED', 'Cancelled'),
-#     )
+class PaymentTransaction(models.Model):
+    class PaymentStatus(models.TextChoices):
+        PENDING = 'PENDING', _('Pending')
+        SUCCESSFUL = 'SUCCESSFUL', _('Successful')
+        FAILED = 'FAILED', _('Failed')
+        CANCELLED = 'CANCELLED', _('Cancelled')
 
-#     tracking_id = models.CharField(max_length=50, unique=True)
-#     amount = models.DecimalField(max_digits=10, decimal_places=3)
-#     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='PENDING')
-#     payment_id = models.CharField(max_length=50, null=True, blank=True)
-#     result = models.CharField(max_length=50, null=True, blank=True)
-#     payment_data = models.JSONField(null=True, blank=True)
-#     created_at = models.DateTimeField(default=timezone.now)
-#     updated_at = models.DateTimeField(auto_now=True)
-
-#     def __str__(self):
-#         return f"{self.tracking_id} - {self.amount} KWD"
-
-#     class Meta:
-#         ordering = ['-created_at']
-
-
-from django.db import models
-
-class KnetTransaction(models.Model):
     track_id = models.CharField(max_length=50, unique=True)
     amount = models.DecimalField(max_digits=10, decimal_places=3)
-    status = models.CharField(max_length=20, default='INITIATED')  # Ensure this field exists
-    result = models.CharField(max_length=20, blank=True, null=True)
-    payment_id = models.CharField(max_length=50, blank=True, null=True)
-    auth = models.CharField(max_length=50, blank=True, null=True)
-    ref = models.CharField(max_length=50, blank=True, null=True)
-    tran_id = models.CharField(max_length=50, blank=True, null=True)
-    encrypted_response = models.TextField(blank=True, null=True)
-    decrypted_response = models.TextField(blank=True, null=True)
+    currency = models.CharField(max_length=3, default='KWD')
+    payment_id = models.CharField(max_length=50, null=True, blank=True)
+    transaction_id = models.CharField(max_length=50, null=True, blank=True)
+    reference_id = models.CharField(max_length=50, null=True, blank=True)
+    status = models.CharField(
+        max_length=10,
+        choices=PaymentStatus.choices,
+        default=PaymentStatus.PENDING
+    )
+    error_code = models.CharField(max_length=50, null=True, blank=True)
+    error_text = models.TextField(null=True, blank=True)
+    response_data = models.JSONField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return self.track_id
+        return f"{self.track_id} - {self.amount} {self.currency}"
+
+    class Meta:
+        ordering = ['-created_at']

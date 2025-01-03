@@ -1,3 +1,12 @@
 INFO 2024-12-19 20:35:58,139 autoreload 16980 1352 Watching for file changes with StatReloader
 INFO 2024-12-19 20:37:40,587 autoreload 24520 27464 Watching for file changes with StatReloader
 INFO 2024-12-19 21:16:10,194 autoreload 33920 17512 Watching for file changes with StatReloader
+INFO 2024-12-19 21:22:58,448 autoreload 37372 34292 Watching for file changes with StatReloader
+INFO 2024-12-19 21:25:52,701 autoreload 37372 34292 C:\Users\Obaidullah\Desktop\dueling_payment\knet\views.py changed, reloading.
+INFO 2024-12-19 21:25:53,648 autoreload 10012 18808 Watching for file changes with StatReloader
+INFO 2024-12-19 21:27:01,268 autoreload 10012 18808 C:\Users\Obaidullah\Desktop\dueling_payment\knet\views.py changed, reloading.
+INFO 2024-12-19 21:27:02,210 autoreload 18668 35764 Watching for file changes with StatReloader
+INFO 2024-12-19 21:28:55,408 autoreload 18668 35764 C:\Users\Obaidullah\Desktop\dueling_payment\knet\views.py changed, reloading.
+INFO 2024-12-19 21:28:56,466 autoreload 38480 8164 Watching for file changes with StatReloader
+INFO 2024-12-19 21:31:04,491 autoreload 38480 8164 C:\Users\Obaidullah\Desktop\dueling_payment\knet\views.py changed, reloading.
+INFO 2024-12-19 21:31:05,519 autoreload 33772 27388 Watching for file changes with StatReloader

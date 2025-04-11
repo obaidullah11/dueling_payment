@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Receipt</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.9.6/lottie.min.js"></script>
+    
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .receipt-container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+        }
+        .lottie-container {
+            width: 150px;
+            height: 150px;
+            margin: 0 auto;
+        }
+        .transaction-details {
+            margin-top: 20px;
+        }
+        .transaction-details p {
+            margin: 10px 0;
+            font-size: 16px;
+            color: #555;
+        }
+        .status {
+            font-weight: bold;
+            color: {% if transaction.status == 'CAPTURED' %}#28a745{% else %}#dc3545{% endif %};
+        }
+    </style>
+</head>
+<body>
+    <div class="receipt-container">
+        <h1>Payment Receipt</h1>
+        <div id="lottie-animation" class="lottie-container"></div>
+        <div class="transaction-details">
+            <p>
+    Payment of <strong>{{ transaction.amount }} {{ transaction.currency }}</strong> 
+    for the <strong>{{ transaction.udf5.tournament_name }}</strong> 
+    (Tournament ID: <strong>{{ transaction.udf5.tournament_id }}</strong>) 
+    by <strong>{{ transaction.udf5.user_name }}</strong> 
+    (User ID: <strong>{{ transaction.udf5.user_id }}</strong>) was 
+    <span class="status">{{ transaction.status }}</span>. 
+    The transaction (ID: <strong>{{ transaction.tran_id }}</strong>) 
+    with Track ID <strong>{{ transaction.track_id }}</strong> 
+    and Payment ID <strong>{{ transaction.payment_id }}</strong> 
+    
+    
+</p>
+
+        </div>
+    </div>
+    
+</body>
+<script>
+    const status = "{{ transaction.status }}";
+    const animationContainer = document.getElementById("lottie-animation");
+
+    let animationUrl = status === "CAPTURED"
+        ? "https://lottie.host/0671abb9-0168-4dbd-8e46-803e96983a94/56jPXevBik.json" // Success animation
+        : "https://lottie.host/0671abb9-0168-4dbd-8e46-803e96983a94/56jPXevBik.json"; // Failed animation
+
+    lottie.loadAnimation({
+        container: animationContainer,
+        renderer: "svg",
+        loop: false,
+        autoplay: true,
+        path: animationUrl
+    });
+</script>
+</html>
+
+
+
+
+
+

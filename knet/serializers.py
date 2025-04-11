@@ -5,7 +5,7 @@ from rest_framework import serializers
 from .models import PaymentTransaction
 
 class InitiatePaymentSerializer(serializers.Serializer):
-    amount = serializers.DecimalField(max_digits=10, decimal_places=3)
+    # amount = serializers.DecimalField(max_digits=10, decimal_places=3)
     currency = serializers.CharField(default='KWD')
 
 class PaymentTransactionSerializer(serializers.ModelSerializer):

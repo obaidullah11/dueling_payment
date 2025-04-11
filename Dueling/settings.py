@@ -227,7 +227,44 @@ STATIC_ROOT = os.path.join(BASE_DIR, '../', 'static')
 # STATICFILES_DIRS = [
 #     'E:/Express car rentel/../static',
 # ]
+KNET_SETTINGS = {
 
+
+    # TRANPORTAL_ID = "540801"
+    # TRANPORTAL_PASSWORD = "540801pg"
+    # TERMINAL_RESOURCE_KEY = "9D2JJ07HA1Y47RF3"
+    # TEST_URL = "https://kpaytest.com.kw/kpg/PaymentHTTP.htm"
+
+
+
+    'TRANPORTAL_ID': '540801',
+    'TRANPORTAL_PASSWORD': '540801pg',
+    'TERMINAL_RESOURCE_KEY': '9D2JJ07HA1Y47RF3',
+    'RESPONSE_URL': 'https://duelingpayment.eu.pythonanywhere.com/response/',
+    'ERROR_URL': 'https://duelingpayment.eu.pythonanywhere.com/error/',
+    'PAYMENT_URL': 'https://kpaytest.com.kw/kpg/PaymentHTTP.htm',  # Test URL
+
+}
+MERCHANT_RECEIPT_URL = 'https://duelingpayment.eu.pythonanywhere.com/receipt/'
+# Logging configuration
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': 'debug.log',
+        },
+    },
+    'loggers': {
+        'payment': {
+            'handlers': ['file'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+    },
+}
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(days=20),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),

@@ -43,7 +43,15 @@ def decrypt_aes(encrypted_data: str, key: str) -> str:
         logger.error(f"Decryption error: {str(e)}")
         raise
 
-def create_knet_request_data(track_id: str, amount: str):
+def create_knet_request_data(
+    track_id: str,
+    amount: str,
+    udf1: str = '',
+    udf2: str = '',
+    udf3: str = '',
+    udf4: str = '',
+    udf5: str = ''
+):
     """Create KNET payment request data"""
     return {
         'trackid': track_id,
@@ -51,9 +59,24 @@ def create_knet_request_data(track_id: str, amount: str):
         'id': settings.KNET_SETTINGS['TRANPORTAL_ID'],
         'password': settings.KNET_SETTINGS['TRANPORTAL_PASSWORD'],
         'currencycode': '414',  # KWD
-        'langid': 'USA',
-        'action': '1',
+        'langid': 'EN',
+        'action': '1',  # Purchase action
         'responseURL': settings.KNET_SETTINGS['RESPONSE_URL'],
         'errorURL': settings.KNET_SETTINGS['ERROR_URL'],
+        'udf1': udf1,
+        'udf2': udf2,
+        'udf3': udf3,
+        'udf4': udf4,
+        'udf5': udf5,
     }
 
+
+
+def log_payment_error(error_data: dict):
+    """Log payment errors for monitoring and debugging"""
+    logger.error(
+        "Payment Error: Code=%s, Text=%s, TrackID=%s",
+        error_data.get('error_code'),
+        error_data.get('error_text'),
+        error_data.get('track_id')
+    )

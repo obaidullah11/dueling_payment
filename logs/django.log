@@ -394,3 +394,17 @@ INFO 2025-03-26 12:30:30,495 views 7 129854124046208 Processing transaction for 
 INFO 2025-03-26 12:30:30,523 views 7 129854124046208 Transaction TRK21D49A02BF76BFD7 updated successfully.
 INFO 2025-03-26 12:30:30,867 views 7 129854124046208 Successfully updated payment status: paid
 WARNING 2025-03-26 12:30:34,436 log 7 129854124046208 Not Found: /favicon.ico
+INFO 2025-07-21 15:19:19,994 autoreload 17168 31196 Watching for file changes with StatReloader
+WARNING 2025-07-21 15:22:01,945 log 17168 11916 Not Found: /
+WARNING 2025-07-21 15:22:01,946 basehttp 17168 11916 "GET / HTTP/1.1" 404 3397
+WARNING 2025-07-21 15:22:33,233 log 17168 11916 Method Not Allowed: /api/payment/
+WARNING 2025-07-21 15:22:33,234 basehttp 17168 11916 "GET /api/payment/ HTTP/1.1" 405 27
+WARNING 2025-07-21 15:22:43,116 log 17168 11916 Not Found: /
+WARNING 2025-07-21 15:22:43,116 basehttp 17168 11916 "GET / HTTP/1.1" 404 3397
+WARNING 2025-07-21 15:22:57,030 log 17168 11916 Method Not Allowed: /api/payment/
+WARNING 2025-07-21 15:22:57,030 basehttp 17168 11916 "GET /api/payment/ HTTP/1.1" 405 27
+WARNING 2025-07-21 15:25:32,983 log 17168 8936 Method Not Allowed: /api/payment/
+WARNING 2025-07-21 15:25:32,984 basehttp 17168 8936 "GET /api/payment/ HTTP/1.1" 405 27
+INFO 2025-07-21 15:25:57,340 basehttp 17168 20976 "POST /api/payment/ HTTP/1.1" 200 1771
+INFO 2025-07-21 22:05:37,467 autoreload 10020 180 Watching for file changes with StatReloader
+INFO 2025-07-21 22:06:04,763 autoreload 14136 25928 Watching for file changes with StatReloader
